@@ -89,3 +89,11 @@ For local development, the seeded platform administrator is
 
 For a detailed implementation inventory and continuation plan, see
 [`docs/HANDOFF.md`](docs/HANDOFF.md).
+
+## Deploy with Vercel
+
+The repository is ready for a two-project Vercel deployment: create one
+project rooted at `backend/` for FastAPI and another rooted at `frontend/` for
+Next.js. A hosted PostgreSQL database is required. Follow the complete setup,
+environment variable list, migration commands, and Razorpay webhook
+configuration in [`docs/VERCEL_DEPLOYMENT.md`](docs/VERCEL_DEPLOYMENT.md).
