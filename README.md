@@ -97,3 +97,8 @@ project rooted at `backend/` for FastAPI and another rooted at `frontend/` for
 Next.js. A hosted PostgreSQL database is required. Follow the complete setup,
 environment variable list, migration commands, and Razorpay webhook
 configuration in [`docs/VERCEL_DEPLOYMENT.md`](docs/VERCEL_DEPLOYMENT.md).
+
+Render deployment is also configured through [`render.yaml`](render.yaml). It
+defines native FastAPI and Next.js web services with the correct monorepo root
+directories and commands. See [`docs/RENDER_DEPLOYMENT.md`](docs/RENDER_DEPLOYMENT.md)
+for Blueprint, manual, and Docker deployment instructions.
