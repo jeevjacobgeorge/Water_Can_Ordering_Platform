@@ -11,6 +11,7 @@ from app.models.order_can_summary import OrderCanSummary
 from app.models.can_inventory import CustomerCanBalance, CanTransaction, CanTransactionType
 from app.models.payment import Payment, PaymentProvider, PaymentRecordStatus
 from app.models.business_settings import BusinessSettings
+from app.models.business import Business
 
 __all__ = [
     "UUIDMixin",
@@ -35,4 +36,5 @@ __all__ = [
     "PaymentProvider",
     "PaymentRecordStatus",
     "BusinessSettings",
+    "Business",
 ]

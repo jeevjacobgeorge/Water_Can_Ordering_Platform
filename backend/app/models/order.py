@@ -51,6 +51,9 @@ VALID_STATUS_TRANSITIONS: dict[OrderStatus, list[OrderStatus]] = {
 class Order(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "orders"
 
+    business_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="RESTRICT"), nullable=False
+    )
     order_number: Mapped[str] = mapped_column(String(30), unique=True, nullable=False)
     customer_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -94,9 +97,10 @@ class Order(UUIDMixin, TimestampMixin, Base):
     customer = relationship("Customer", back_populates="orders")
     address = relationship("CustomerAddress", lazy="selectin")
     product = relationship("Product", lazy="selectin")
-    assignment = relationship("OrderAssignment", back_populates="order", uselist=False, lazy="selectin")
+    assignments = relationship("OrderAssignment", back_populates="order", lazy="selectin")
     can_summary = relationship("OrderCanSummary", back_populates="order", uselist=False, lazy="selectin")
     payment = relationship("Payment", back_populates="order", uselist=False, lazy="selectin")
+    business = relationship("Business", back_populates="orders", lazy="selectin")
 
     __table_args__ = (
         Index("ix_orders_order_number", "order_number"),
@@ -104,6 +108,7 @@ class Order(UUIDMixin, TimestampMixin, Base):
         Index("ix_orders_order_status", "order_status"),
         Index("ix_orders_payment_status", "payment_status"),
         Index("ix_orders_created_at", "created_at"),
+        Index("ix_orders_business_id", "business_id"),
     )
 
     def __repr__(self) -> str:

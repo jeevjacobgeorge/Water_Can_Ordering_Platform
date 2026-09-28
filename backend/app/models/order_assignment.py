@@ -41,7 +41,7 @@ class OrderAssignment(UUIDMixin, Base):
     )
 
     # Relationships
-    order = relationship("Order", back_populates="assignment")
+    order = relationship("Order", back_populates="assignments")
     staff = relationship("User", foreign_keys=[staff_id], lazy="selectin")
     assigned_by_user = relationship("User", foreign_keys=[assigned_by], lazy="selectin")
 

@@ -17,6 +17,8 @@ class UserResponse(BaseModel):
     name: str
     email: str
     role: str
+    business_id: uuid.UUID | None = None
+    business_slug: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -34,5 +36,7 @@ class MeResponse(BaseModel):
     phone: str | None
     role: str
     is_active: bool
+    business_id: uuid.UUID | None = None
+    business_slug: str | None = None
 
     model_config = {"from_attributes": True}

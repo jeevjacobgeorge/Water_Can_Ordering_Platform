@@ -34,6 +34,7 @@ from app.models import (
     PaymentProvider,
     PaymentRecordStatus,
     BusinessSettings,
+    Business,
 )
 
 logger = logging.getLogger(__name__)
@@ -53,17 +54,52 @@ async def seed():
     logger.info("Seeding database for %s environment...", settings.ENVIRONMENT)
 
     async with async_session_factory() as session:
-        # Check if already seeded
+        # Keep the seed command useful after migrations: existing databases may
+        # need the platform administrator even when their sample rows already exist.
         result = await session.execute(select(User).limit(1))
         if result.scalar_one_or_none():
-            logger.info("Database already seeded — skipping.")
+            admin_result = await session.execute(
+                select(User).where(User.role == UserRole.PLATFORM_ADMIN).limit(1)
+            )
+            if admin_result.scalar_one_or_none() is None:
+                session.add(User(
+                    name="Platform Administrator",
+                    email=settings.SEED_PLATFORM_ADMIN_EMAIL,
+                    password_hash=_hash_password(settings.SEED_PLATFORM_ADMIN_PASSWORD),
+                    role=UserRole.PLATFORM_ADMIN,
+                    is_active=True,
+                ))
+                await session.commit()
+                logger.info("Platform administrator created: %s", settings.SEED_PLATFORM_ADMIN_EMAIL)
+            else:
+                logger.info("Database already seeded — skipping.")
             return
 
         now = datetime.now(timezone.utc)
+        business_id = uuid.uuid4()
+
+        business = Business(
+            id=business_id,
+            name="AquaPure Water Supply",
+            slug="aquapure-water-supply",
+            is_active=True,
+        )
+        session.add(business)
+
+        platform_admin = User(
+            id=uuid.uuid4(),
+            name="Platform Administrator",
+            email=settings.SEED_PLATFORM_ADMIN_EMAIL,
+            password_hash=_hash_password(settings.SEED_PLATFORM_ADMIN_PASSWORD),
+            role=UserRole.PLATFORM_ADMIN,
+            is_active=True,
+        )
+        session.add(platform_admin)
 
         # ── Owner ──────────────────────────────────────────
         owner = User(
             id=uuid.uuid4(),
+            business_id=business_id,
             name="Demo Owner",
             phone="9000000001",
             email="owner@watercan.dev",
@@ -76,6 +112,7 @@ async def seed():
         # ── Staff ──────────────────────────────────────────
         staff_akhil = User(
             id=uuid.uuid4(),
+            business_id=business_id,
             name="Akhil",
             phone="9000000002",
             email="akhil@watercan.dev",
@@ -85,6 +122,7 @@ async def seed():
         )
         staff_rahul = User(
             id=uuid.uuid4(),
+            business_id=business_id,
             name="Rahul",
             phone="9000000003",
             email="rahul@watercan.dev",
@@ -97,6 +135,7 @@ async def seed():
         # ── Product ────────────────────────────────────────
         product = Product(
             id=uuid.uuid4(),
+            business_id=business_id,
             name="20L Water Can",
             description="Premium purified 20-litre water can",
             price_per_unit=50.00,
@@ -108,6 +147,7 @@ async def seed():
         # ── Business Settings ──────────────────────────────
         biz_settings = BusinessSettings(
             id=uuid.uuid4(),
+            business_id=business_id,
             business_name="AquaPure Water Supply",
             business_phone="9000000001",
             business_address="Pattom, Trivandrum, Kerala",
@@ -120,6 +160,7 @@ async def seed():
         # ── Customer 1: John George (existing customer) ───
         customer_john = Customer(
             id=uuid.uuid4(),
+            business_id=business_id,
             name="John George",
             phone="9876543210",
             email="john@example.com",
@@ -146,6 +187,7 @@ async def seed():
         # ── Customer 2: Arun (newer customer) ─────────────
         customer_arun = Customer(
             id=uuid.uuid4(),
+            business_id=business_id,
             name="Arun Kumar",
             phone="9999999999",
             is_active=True,
@@ -170,11 +212,13 @@ async def seed():
         # ── Can Balances ───────────────────────────────────
         john_balance = CustomerCanBalance(
             id=uuid.uuid4(),
+            business_id=business_id,
             customer_id=customer_john.id,
             current_balance=4,
         )
         arun_balance = CustomerCanBalance(
             id=uuid.uuid4(),
+            business_id=business_id,
             customer_id=customer_arun.id,
             current_balance=0,
         )
@@ -186,6 +230,7 @@ async def seed():
         # Order 1 — Delivered (John)
         order1 = Order(
             id=uuid.uuid4(),
+            business_id=business_id,
             order_number=f"WC-{today}-0001",
             customer_id=customer_john.id,
             address_id=address_john.id,
@@ -205,6 +250,7 @@ async def seed():
         # Order 2 — Paid, assigned to Akhil (John)
         order2 = Order(
             id=uuid.uuid4(),
+            business_id=business_id,
             order_number=f"WC-{today}-0002",
             customer_id=customer_john.id,
             address_id=address_john.id,
@@ -224,6 +270,7 @@ async def seed():
         # Order 3 — Paid, unassigned (Arun)
         order3 = Order(
             id=uuid.uuid4(),
+            business_id=business_id,
             order_number=f"WC-{today}-0003",
             customer_id=customer_arun.id,
             address_id=address_arun.id,
@@ -243,6 +290,7 @@ async def seed():
         # Order 4 — Out for delivery (John)
         order4 = Order(
             id=uuid.uuid4(),
+            business_id=business_id,
             order_number=f"WC-{today}-0004",
             customer_id=customer_john.id,
             address_id=address_john.id,
@@ -262,6 +310,7 @@ async def seed():
         # Order 5 — Pending payment (Arun)
         order5 = Order(
             id=uuid.uuid4(),
+            business_id=business_id,
             order_number=f"WC-{today}-0005",
             customer_id=customer_arun.id,
             address_id=address_arun.id,
@@ -309,6 +358,7 @@ async def seed():
         # ── Can Transactions (for delivered order) ────────
         tx_delivered = CanTransaction(
             id=uuid.uuid4(),
+            business_id=business_id,
             customer_id=customer_john.id,
             order_id=order1.id,
             transaction_type=CanTransactionType.DELIVERED,
@@ -320,6 +370,7 @@ async def seed():
         )
         tx_returned = CanTransaction(
             id=uuid.uuid4(),
+            business_id=business_id,
             customer_id=customer_john.id,
             order_id=order1.id,
             transaction_type=CanTransactionType.RETURNED,

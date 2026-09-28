@@ -46,7 +46,7 @@ async def _get_order_inputs(
 
     product_result = await db.execute(
         select(Product)
-        .where(Product.is_active == True)
+        .where(Product.is_active == True, Product.business_id == customer.business_id)
         .order_by(Product.created_at.asc())
         .limit(1)
     )
@@ -57,7 +57,9 @@ async def _get_order_inputs(
             detail="No active water product is configured",
         )
 
-    business_result = await db.execute(select(BusinessSettings).limit(1))
+    business_result = await db.execute(
+        select(BusinessSettings).where(BusinessSettings.business_id == customer.business_id).limit(1)
+    )
     business_settings = business_result.scalar_one_or_none()
     delivery_charge = Decimal(
         str(business_settings.default_delivery_charge)
@@ -88,13 +90,14 @@ async def _create_order(
     delivery_slot: str | None,
     customer_notes: str | None,
 ) -> Order:
-    _, _, product, delivery_charge = await _get_order_inputs(
+    customer, _, product, delivery_charge = await _get_order_inputs(
         db, customer_id, address_id
     )
 
     price_per_unit = Decimal(str(product.price_per_unit))
     subtotal = price_per_unit * quantity
     order = Order(
+        business_id=customer.business_id,
         order_number=await generate_order_number(db),
         customer_id=customer_id,
         address_id=address_id,

@@ -5,7 +5,7 @@ Customer APIs — public customer lookup and creation for the ordering flow.
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -24,6 +24,7 @@ from app.schemas.customer import (
     CustomerUpdate,
     CustomerResponse,
 )
+from app.services.business import resolve_business
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 async def get_customer_by_phone(
     phone: str,
     db: Annotated[AsyncSession, Depends(get_db)],
+    business_slug: str | None = Query(None),
 ):
     """
     Public endpoint — lookup a customer by phone number for the ordering flow.
@@ -45,9 +47,14 @@ async def get_customer_by_phone(
     if phone.startswith("91") and len(phone) == 12:
         phone = phone[2:]
 
+    business = await resolve_business(db, business_slug)
     result = await db.execute(
         select(Customer)
-        .where(Customer.phone == phone, Customer.is_active == True)
+        .where(
+            Customer.phone == phone,
+            Customer.business_id == business.id,
+            Customer.is_active == True,
+        )
         .options(
             selectinload(Customer.addresses),
             selectinload(Customer.can_balance),
@@ -100,11 +107,16 @@ async def get_customer_by_phone(
 async def create_customer(
     body: CustomerCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
+    business_slug: str | None = Query(None),
 ):
     """Create a new customer (used during first-time ordering flow)."""
+    business = await resolve_business(db, business_slug)
     # Check for duplicate phone
     existing = await db.execute(
-        select(Customer).where(Customer.phone == body.phone)
+        select(Customer).where(
+            Customer.phone == body.phone,
+            Customer.business_id == business.id,
+        )
     )
     if existing.scalar_one_or_none():
         raise HTTPException(
@@ -113,6 +125,7 @@ async def create_customer(
         )
 
     customer = Customer(
+        business_id=business.id,
         name=body.name,
         phone=body.phone,
         email=body.email,
@@ -122,6 +135,7 @@ async def create_customer(
 
     # Initialize can balance
     can_balance = CustomerCanBalance(
+        business_id=business.id,
         customer_id=customer.id,
         current_balance=0,
     )

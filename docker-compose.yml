@@ -37,6 +37,8 @@ services:
       DEBUG: ${DEBUG:-true}
       SEED_OWNER_PASSWORD: ${SEED_OWNER_PASSWORD:-change-owner-password}
       SEED_STAFF_PASSWORD: ${SEED_STAFF_PASSWORD:-change-staff-password}
+      SEED_PLATFORM_ADMIN_EMAIL: ${SEED_PLATFORM_ADMIN_EMAIL:-platform@watercan.dev}
+      SEED_PLATFORM_ADMIN_PASSWORD: ${SEED_PLATFORM_ADMIN_PASSWORD:-change-platform-password}
     depends_on:
       db:
         condition: service_healthy

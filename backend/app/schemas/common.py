@@ -24,6 +24,7 @@ class DashboardResponse(BaseModel):
     pending_orders: int = 0
     unassigned_orders: int = 0
     out_for_delivery: int = 0
+    total_cans_with_customers: int = 0
 
 
 class StaffDashboardResponse(BaseModel):

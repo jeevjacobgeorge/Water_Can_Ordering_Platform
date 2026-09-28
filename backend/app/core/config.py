@@ -28,9 +28,11 @@ class Settings(BaseSettings):
     # Development seed credentials. These must be changed outside local development.
     SEED_OWNER_PASSWORD: str = "change-owner-password"
     SEED_STAFF_PASSWORD: str = "change-staff-password"
+    SEED_PLATFORM_ADMIN_EMAIL: str = "platform@watercan.dev"
+    SEED_PLATFORM_ADMIN_PASSWORD: str = "change-platform-password"
 
     # CORS
-    CORS_ORIGINS: str = "http://localhost:3000"
+    CORS_ORIGINS: str = "http://localhost:3000,http://192.168.1.23:3000"
 
     @property
     def cors_origins_list(self) -> list[str]:

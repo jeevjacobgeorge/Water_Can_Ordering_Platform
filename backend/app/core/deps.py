@@ -9,6 +9,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.security import decode_access_token
 from app.db.session import get_db
@@ -45,7 +46,7 @@ async def get_current_user(
             detail="Invalid token payload",
         )
 
-    result = await db.execute(select(User).where(User.id == user_uuid))
+    result = await db.execute(select(User).where(User.id == user_uuid).options(selectinload(User.business)))
     user = result.scalar_one_or_none()
 
     if user is None or not user.is_active:
@@ -65,6 +66,18 @@ async def require_owner(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Owner access required",
+        )
+    return current_user
+
+
+async def require_platform_admin(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    """Require the platform account that manages all sellers."""
+    if current_user.role != UserRole.PLATFORM_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform administrator access required",
         )
     return current_user
 

@@ -6,7 +6,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,10 +23,12 @@ class CanTransactionType(str, enum.Enum):
 class CustomerCanBalance(UUIDMixin, Base):
     __tablename__ = "customer_can_balances"
 
+    business_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="RESTRICT"), nullable=False
+    )
     customer_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("customers.id", ondelete="CASCADE"),
-        unique=True,
         nullable=False,
     )
     current_balance: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -39,9 +41,12 @@ class CustomerCanBalance(UUIDMixin, Base):
 
     # Relationships
     customer = relationship("Customer", back_populates="can_balance")
+    business = relationship("Business", lazy="selectin")
 
     __table_args__ = (
         Index("ix_customer_can_balances_customer_id", "customer_id"),
+        Index("ix_customer_can_balances_business_id", "business_id"),
+        UniqueConstraint("business_id", "customer_id", name="uq_customer_can_balances_business_customer"),
     )
 
     def __repr__(self) -> str:
@@ -51,6 +56,9 @@ class CustomerCanBalance(UUIDMixin, Base):
 class CanTransaction(UUIDMixin, Base):
     __tablename__ = "can_transactions"
 
+    business_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="RESTRICT"), nullable=False
+    )
     customer_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("customers.id", ondelete="CASCADE"),
@@ -84,11 +92,13 @@ class CanTransaction(UUIDMixin, Base):
     customer = relationship("Customer")
     order = relationship("Order")
     created_by_user = relationship("User")
+    business = relationship("Business", lazy="selectin")
 
     __table_args__ = (
         Index("ix_can_transactions_customer_id", "customer_id"),
         Index("ix_can_transactions_order_id", "order_id"),
         Index("ix_can_transactions_created_at", "created_at"),
+        Index("ix_can_transactions_business_id", "business_id"),
     )
 
     def __repr__(self) -> str:

@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_current_user
 from app.core.security import verify_password, create_access_token
@@ -26,7 +27,7 @@ async def login(
 ):
     """Authenticate owner or staff and return JWT token."""
     result = await db.execute(
-        select(User).where(User.email == body.username)
+        select(User).where(User.email == body.username).options(selectinload(User.business))
     )
     user = result.scalar_one_or_none()
 
@@ -56,6 +57,8 @@ async def login(
             name=user.name,
             email=user.email,
             role=user.role.value,
+            business_id=user.business_id,
+            business_slug=user.business.slug if user.business else None,
         ),
     )
 
@@ -72,4 +75,6 @@ async def get_me(
         phone=current_user.phone,
         role=current_user.role.value,
         is_active=current_user.is_active,
+        business_id=current_user.business_id,
+        business_slug=current_user.business.slug if current_user.business else None,
     )

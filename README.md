@@ -8,9 +8,14 @@ order management, staff delivery, and can balance tracking.
 - Next.js, React, TypeScript, Tailwind CSS
 - FastAPI, Pydantic, SQLAlchemy 2.x, Alembic
 - PostgreSQL
-- Razorpay integration planned for the payment phase
+- Razorpay Checkout with server-side signature and webhook verification
 
 ## Local setup with Docker
+
+On Ubuntu, run [`start.sh`](start.sh). It first runs [`stop.sh`](stop.sh), then
+starts the services, applies the migration, seeds development data, and opens
+the customer app when `xdg-open` is available. `run.sh` remains as a compatible
+alias for `start.sh`.
 
 1. Copy the local configuration:
 
@@ -36,6 +41,11 @@ order management, staff delivery, and can balance tracking.
 The frontend is at <http://localhost:3000>, the API is at
 <http://localhost:8000>, and FastAPI documentation is at
 <http://localhost:8000/docs>.
+
+To open the app from another device on the same LAN, use
+`http://192.168.1.23:3000`. The frontend must use
+`http://192.168.1.23:8000/api/v1` as its API URL, and Ubuntu must allow TCP
+ports 3000 and 8000 through its firewall.
 
 ## Local setup without Docker
 
@@ -65,7 +75,17 @@ spec.md             Product and implementation specification
 docker-compose.yml
 ```
 
-The application is being built phase by phase. The current foundation includes
-the database schema and seed data, the health endpoint, the initial customer and
-auth APIs, and a mobile landing page. Ordering, payments, dashboards, and
-delivery workflows are implemented in later phases.
+The current application includes seller/business tenants, seller onboarding,
+seller-scoped products, customers, orders, staff, can balances, and settings.
+The platform administrator portal is available under `/platform/login`; each
+seller receives an owner account and a public ordering URL such as
+`/?seller=aquapure-water-supply`. Seller owners use `/admin` for their own
+orders and staff. Staff can currently use the staff API workflow; a dedicated
+staff frontend remains to be built.
+
+For local development, the seeded platform administrator is
+`platform@watercan.dev` with the value of `SEED_PLATFORM_ADMIN_PASSWORD` in
+`.env`. Use that account to create sellers at `/platform/sellers`.
+
+For a detailed implementation inventory and continuation plan, see
+[`docs/HANDOFF.md`](docs/HANDOFF.md).
