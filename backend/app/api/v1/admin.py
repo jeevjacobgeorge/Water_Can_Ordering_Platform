@@ -78,6 +78,7 @@ def _order_detail(order: Order) -> dict:
 async def _get_order(db: AsyncSession, order_id: UUID, business_id: UUID) -> Order:
     result = await db.execute(
         select(Order)
+        .execution_options(populate_existing=True)
         .where(Order.id == order_id, Order.business_id == business_id)
         .options(*_order_options())
     )
@@ -85,6 +86,11 @@ async def _get_order(db: AsyncSession, order_id: UUID, business_id: UUID) -> Ord
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     return order
+
+
+async def _get_order_detail(db: AsyncSession, order_id: UUID, business_id: UUID) -> dict:
+    """Reload an order with all response relationships after a write."""
+    return _order_detail(await _get_order(db, order_id, business_id))
 
 
 def _transition(order: Order, target: OrderStatus) -> None:
@@ -359,7 +365,7 @@ async def confirm_order(
     order = await _get_order(db, order_id, owner.business_id)
     _transition(order, OrderStatus.CONFIRMED)
     await db.flush()
-    return _order_detail(order)
+    return await _get_order_detail(db, order_id, owner.business_id)
 
 
 @router.post("/orders/{order_id}/assign", response_model=OrderDetailResponse)
@@ -398,8 +404,7 @@ async def assign_order(
     )
     db.add(assignment)
     await db.flush()
-    await db.refresh(order, attribute_names=["assignments"])
-    return _order_detail(order)
+    return await _get_order_detail(db, order_id, owner.business_id)
 
 
 @router.post("/orders/{order_id}/unassign", response_model=OrderDetailResponse)
@@ -418,7 +423,7 @@ async def unassign_order(
     if order.order_status == OrderStatus.ASSIGNED:
         _transition(order, OrderStatus.CONFIRMED)
     await db.flush()
-    return _order_detail(order)
+    return await _get_order_detail(db, order_id, owner.business_id)
 
 
 @router.post("/orders/{order_id}/out-for-delivery", response_model=OrderDetailResponse)
@@ -430,7 +435,7 @@ async def mark_out_for_delivery(
     order = await _get_order(db, order_id, owner.business_id)
     _transition(order, OrderStatus.OUT_FOR_DELIVERY)
     await db.flush()
-    return _order_detail(order)
+    return await _get_order_detail(db, order_id, owner.business_id)
 
 
 @router.post("/orders/{order_id}/delivered", response_model=OrderDetailResponse)
@@ -501,7 +506,7 @@ async def mark_delivered(
             created_by=owner.id,
         ))
     await db.flush()
-    return _order_detail(order)
+    return await _get_order_detail(db, order_id, owner.business_id)
 
 
 @router.post("/orders/{order_id}/cancel", response_model=OrderDetailResponse)
@@ -513,4 +518,4 @@ async def cancel_order(
     order = await _get_order(db, order_id, owner.business_id)
     _transition(order, OrderStatus.CANCELLED)
     await db.flush()
-    return _order_detail(order)
+    return await _get_order_detail(db, order_id, owner.business_id)
