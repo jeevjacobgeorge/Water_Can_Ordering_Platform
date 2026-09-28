@@ -18,7 +18,7 @@ from app.models.user import User
 from app.schemas.common import StaffDashboardResponse
 from app.schemas.order import OrderDetailResponse
 
-from app.api.v1.admin import _order_detail, _order_options
+from app.api.v1.admin import _get_order_detail, _order_detail, _order_options
 
 router = APIRouter(prefix="/staff", tags=["staff"])
 
@@ -141,5 +141,4 @@ async def claim_order(
         assigned_at=datetime.now(timezone.utc),
     ))
     await db.flush()
-    await db.refresh(order, attribute_names=["assignments"])
-    return _order_detail(order)
+    return await _get_order_detail(db, order_id, staff.business_id)
